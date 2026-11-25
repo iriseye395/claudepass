@@ -87,6 +87,49 @@ const SOCIAL = [
 	},
 ]
 
+// Clawd as pixel art, gangster edition.
+// X body, D body shade, K shades, G lens glint, Y/y gold chain links, C cap,
+// O cap logo, B cap brim, P/Q arms, L/M the two leg pairs (they step alternately).
+const CLAWD = [
+	'....CCCCCC......',
+	'...CCCOCCCCBBBB.',
+	'..XXXXXXXXXXXX..',
+	'.KKKKKKKKKKKKKK.',
+	'..XKGKKXXKGKKX..',
+	'.PXXKKXXXXKKXXQ.',
+	'..XXYXXXXXXYXX..',
+	'..XXXyYyyYyXXX..',
+	'..DDDDDYYDDDDD..',
+	'...L.M....L.M...',
+	'...L.M....L.M...',
+]
+
+function clawdSvg(): string {
+	const cells = (match: string) =>
+		CLAWD.flatMap((row, y) =>
+			[...row].flatMap((c, x) =>
+				c === match
+					? [`<rect x="${x}" y="${y}" width="1.04" height="1.04"/>`]
+					: [],
+			),
+		).join('')
+	return `<svg viewBox="0 0 16 11" aria-hidden="true"><g class="sprite">
+		<g class="legs leg-a">${cells('L')}</g>
+		<g class="legs leg-b">${cells('M')}</g>
+		<g class="up">
+			<g class="body">${cells('X')}</g>
+			<g class="shade">${cells('D')}</g>
+			<g class="arm arm-l">${cells('P')}</g>
+			<g class="arm arm-r">${cells('Q')}</g>
+			<g class="chain">${cells('Y')}<g class="link">${cells('y')}</g></g>
+			<g class="cap">${cells('C')}</g>
+			<g class="logo">${cells('O')}</g>
+			<g class="brim">${cells('B')}</g>
+			<g class="shades">${cells('K')}<g class="glint">${cells('G')}</g></g>
+		</g>
+	</g></svg>`
+}
+
 const socialLinks = () =>
 	SOCIAL.map(
 		(s) =>
@@ -269,6 +312,57 @@ form button:disabled { opacity: .5; cursor: default; }
 .social a:focus-visible { outline: 2px solid var(--lav); outline-offset: 1px; }
 .legal { flex-basis: 100%; margin: 2px 0 0; font-size: 11.5px; line-height: 1.6; color: var(--dim); }
 
+/* --- Clawd --- */
+.wrap { position: relative; }
+.clawd {
+	position: absolute; top: 0; right: 34px; z-index: 2; width: 96px; height: 66px;
+	transform: translateY(-100%); margin-top: 1px;
+	background: none; border: 0; padding: 0; cursor: pointer;
+}
+.clawd:focus-visible { outline: 2px solid var(--lav); outline-offset: 4px; border-radius: 6px; }
+.clawd svg { width: 100%; height: 100%; overflow: visible; shape-rendering: crispEdges; }
+.clawd .body, .clawd .arm, .clawd .legs { fill: var(--orange); }
+.clawd .shade { fill: #b45c3e; }
+.clawd .shades { fill: #2b2650; }
+.clawd .glint { fill: #fff; animation: glint 3.2s infinite; }
+.clawd .link { fill: #c08a22; }
+.clawd .logo { fill: var(--lav); }
+.clawd .chain { fill: #f2c14e; }
+.clawd .cap { fill: #26262e; }
+.clawd .brim { fill: #3a3a46; }
+.clawd g { transform-box: fill-box; transform-origin: center bottom; }
+/* idle: nods to the beat; the whole sprite moves as one so the feet never detach */
+.clawd .sprite { animation: nod 1.1s steps(2) infinite; }
+@keyframes nod { 0% { transform: translateY(0); } 50% { transform: translateY(.25px); } }
+@keyframes glint { 0%, 70%, 100% { opacity: .75; } 76% { opacity: 1; fill: #fffbe6; } }
+
+.clawd:hover .arm-r, .clawd.wave .arm-r { animation: wave .3s steps(2) 4; }
+@keyframes wave { 50% { transform: translateY(-1.5px); } }
+.clawd.hop .sprite { animation: hop .45s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes hop { 40% { transform: translateY(-2px); } }
+
+/* thinking: nods fast and taps its feet */
+.clawd.think .sprite { animation: nod .4s steps(2) infinite; }
+.clawd.think .leg-a { animation: tap .3s steps(1) infinite; }
+.clawd.think .leg-b { animation: tap .3s steps(1) infinite .15s; }
+.clawd.think .glint { animation: glint .8s infinite; }
+@keyframes tap { 50% { transform: translateY(-.5px) scaleY(.6); } }
+
+/* won: jumps, spins, arms up, chain flashing */
+.clawd.win svg { animation: spin360 1.6s ease-in-out infinite; }
+.clawd.win .sprite { animation: jump .8s cubic-bezier(.3, 1.5, .5, 1) infinite; }
+.clawd.win .arm { transform: translateY(-1.5px); }
+.clawd.win .chain { animation: bling .4s steps(2) infinite; }
+@keyframes jump { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-3px); } }
+@keyframes spin360 { 0%, 40% { transform: rotate(0); } 70%, 100% { transform: rotate(360deg); } }
+@keyframes bling { 50% { fill: #fff6c8; } }
+
+/* lost: slumps and the shades slide down */
+.clawd.sad .sprite { animation: none; transform: translateY(.4px); transition: transform .3s ease; }
+.clawd.sad .cap, .clawd.sad .logo, .clawd.sad .brim { transform: translateY(.5px); transition: transform .3s ease; }
+.clawd.sad .shades { transform: translateY(.6px); transition: transform .3s ease; }
+.clawd.sad .arm { transform: translateY(.6px); }
+
 /* --- winner celebration --- */
 .fx { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 50; }
 .flash {
@@ -312,12 +406,14 @@ form button:disabled { opacity: .5; cursor: default; }
 	.ticket { font-size: 13px; padding: 10px 10px; }
 	.site { justify-content: center; text-align: center; }
 	.legal { text-align: center; }
+	.clawd { width: 76px; height: 52px; right: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
 <div class="wrap">
+<button class="clawd" id="clawd" type="button" aria-label="Clawd, the Claude Code mascot" title="hi, I'm Clawd">${clawdSvg()}</button>
 <main class="term">
 	<section class="body">
 		<h1>Guest passes</h1>
@@ -359,7 +455,7 @@ form button:disabled { opacity: .5; cursor: default; }
 	<nav class="social" aria-label="Mehul on social media">
 		${socialLinks()}
 	</nav>
-	<p class="legal">Free to enter. Not affiliated with Anthropic. Claude is a trademark of Anthropic, PBC.</p>
+	<p class="legal">Free to enter. Not affiliated with Anthropic. Claude is a trademark of Anthropic, PBC, and Clawd is Anthropic's mascot.</p>
 </footer>
 </div>
 
@@ -374,6 +470,19 @@ form button:disabled { opacity: .5; cursor: default; }
 	let busy = false;
 	let timer = null;
 	let claimToken = null;
+
+	const clawd = $("clawd");
+	let moodTimer = null;
+	function mood({ state, ms = 0 }) {
+		clearTimeout(moodTimer);
+		clawd.classList.remove("think", "win", "sad", "hop", "wave");
+		if (state) clawd.classList.add(state);
+		if (state && ms) moodTimer = setTimeout(() => clawd.classList.remove(state), ms);
+	}
+	clawd.addEventListener("click", () => {
+		if (clawd.classList.contains("think") || clawd.classList.contains("win")) return;
+		mood({ state: "hop", ms: 500 });
+	});
 
 	const serverNow = () => Date.now() / 1000 + skew;
 	const fmt = (s) => { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
@@ -603,6 +712,7 @@ form button:disabled { opacity: .5; cursor: default; }
 		t.classList.add("chosen", "rolling");
 		$("tickets").classList.add("locked");
 		const stop = spinner();
+		mood({ state: "think" });
 
 		let res;
 		try {
@@ -623,15 +733,18 @@ form button:disabled { opacity: .5; cursor: default; }
 			sessionStorage.setItem("claim", JSON.stringify({ token: d.token, expiresAt: d.expiresAt - skew, test: !!d.test }));
 			showClaim({ expiresAt: d.expiresAt, test: !!d.test });
 			celebrate({ from: t });
+			mood({ state: "win" });
 			return;
 		}
 		if (res.status === 200) {
 			t.classList.add("lost");
 			t.innerHTML = ") -- <span class=\\"star\\">✻</span> <span class=\\"cut\\">┆</span> (";
 			setLeft(d.remaining);
+			mood({ state: "sad", ms: 3200 });
 			cooldown({ nextPlayAt: d.nextPlayAt, lead: [line({ cls: "bad", text: "✗ Empty ticket. No pass this time." })] });
 			return;
 		}
+		if (!(res.status === 200)) mood({ state: null });
 		if (res.status === 429 && d.nextPlayAt) return cooldown({ nextPlayAt: d.nextPlayAt, lead: [line({ cls: "bad", text: "✗ This network already pulled within the hour." })] });
 		if (res.status === 410) return soldOut();
 		t.classList.remove("chosen");
@@ -765,6 +878,7 @@ form button:disabled { opacity: .5; cursor: default; }
 		if (data.remaining === 0) return soldOut();
 		if (data.nextPlayAt) return cooldown({ nextPlayAt: data.nextPlayAt, lead: [line({ cls: "m", text: "You've already pulled this hour." })] });
 		reset();
+		mood({ state: "wave", ms: 1000 });
 	})();
 })();
 </script>
