@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<style>
+			* {
+				box-sizing: border-box;
+				margin: 0;
+			}
+			html,
+			body {
+				width: 1200px;
+				height: 630px;
+				background: #0e0e11;
+				overflow: hidden;
+			}
+			body {
+				font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+				color: #e6e6ea;
+				display: grid;
+				place-items: center;
+				background:
+					radial-gradient(
+						900px 420px at 85% 110%,
+						#d9775722,
+						transparent 60%
+					),
+					radial-gradient(
+						700px 380px at 10% -10%,
+						#a8a8f01a,
+						transparent 60%
+					),
+					#0e0e11;
+			}
+			.card {
+				width: 1040px;
+				height: 500px;
+				background: #1b1b20;
+				border: 2px solid #34343d;
+				border-top: 4px solid #a8a8f0;
+				border-radius: 24px;
+				padding: 56px 64px;
+				display: flex;
+				flex-direction: column;
+				box-shadow: 0 40px 120px -40px #000;
+			}
+			h1 {
+				font-size: 58px;
+				font-weight: 500;
+				color: #a8a8f0;
+				letter-spacing: -1px;
+			}
+			.sub {
+				font-size: 30px;
+				color: #8a8a96;
+				margin-top: 10px;
+			}
+			.tickets {
+				display: flex;
+				gap: 34px;
+				margin-top: 56px;
+			}
+			.t {
+				position: relative;
+				font-size: 36px;
+				padding: 22px 32px;
+				border: 2.5px solid #8b8b97;
+				border-radius: 3px;
+				white-space: pre;
+			}
+			.t::before,
+			.t::after {
+				content: '';
+				position: absolute;
+				top: 30%;
+				bottom: 30%;
+				width: 7px;
+				background: #1b1b20;
+			}
+			.t::before {
+				left: -5px;
+			}
+			.t::after {
+				right: -5px;
+			}
+			.t .s {
+				color: #d97757;
+			}
+			.t .c {
+				color: #5d5d68;
+			}
+			.t.win {
+				border-color: #d97757;
+				color: #d97757;
+				box-shadow:
+					0 0 0 7px #d977571f,
+					0 0 60px -10px #d97757aa;
+			}
+			.foot {
+				margin-top: auto;
+				display: flex;
+				justify-content: space-between;
+				align-items: baseline;
+				font-size: 24px;
+				color: #8a8a96;
+			}
+			.foot b {
+				color: #e6e6ea;
+				font-weight: 500;
+			}
+			.dot {
+				color: #7ec699;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="card">
+			<h1>Claude Code guest passes</h1>
+			<div class="sub">3 free weeks · long odds · one pull per hour</div>
+			<div class="tickets">
+				<div class="t">
+					) CC <span class="s">✻</span> <span class="c">┆</span> (
+				</div>
+				<div class="t win">
+					) CC <span class="s">✻</span> <span class="c">┆</span> (
+				</div>
+				<div class="t">
+					) CC <span class="s">✻</span> <span class="c">┆</span> (
+				</div>
+			</div>
+			<div class="foot">
+				<span><b>claudepass.mehulmohan.com</b></span>
+				<span><span class="dot">●</span> by @mehulmpt</span>
+			</div>
+		</div>
+	</body>
+</html>

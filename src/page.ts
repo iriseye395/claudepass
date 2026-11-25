@@ -1,0 +1,706 @@
+import { escapeHtml } from './lib.ts'
+
+export function renderPage({
+	siteKey,
+	ladder,
+}: {
+	siteKey: string
+	ladder: number[]
+}): Response {
+	const nonce = crypto.randomUUID().replaceAll('-', '')
+	const csp = [
+		"default-src 'none'",
+		`script-src 'nonce-${nonce}' https://challenges.cloudflare.com`,
+		`style-src 'nonce-${nonce}'`,
+		'frame-src https://challenges.cloudflare.com',
+		"connect-src 'self'",
+		"img-src 'self' data:",
+		"base-uri 'none'",
+		"form-action 'none'",
+		"frame-ancestors 'none'",
+	].join('; ')
+
+	return new Response(html({ nonce, siteKey: escapeHtml(siteKey), ladder }), {
+		headers: {
+			'content-type': 'text/html; charset=utf-8',
+			'cache-control': 'no-store',
+			'content-security-policy': csp,
+			'x-content-type-options': 'nosniff',
+			'referrer-policy': 'no-referrer',
+			'strict-transport-security': 'max-age=31536000',
+		},
+	})
+}
+
+const SITE = 'https://claudepass.mehulmohan.com'
+const REPO = 'https://github.com/mehulmpt/claudepass'
+
+const jsonLd = (ladder: number[]) =>
+	JSON.stringify({
+		'@context': 'https://schema.org',
+		'@type': 'WebSite',
+		name: 'claudepass',
+		url: `${SITE}/`,
+		description: `Claude Code guest pass giveaway by Mehul Mohan. Odds: ${fmtLadder(ladder)}.`,
+		author: {
+			'@type': 'Person',
+			name: 'Mehul Mohan',
+			url: 'https://mehulmohan.com',
+			sameAs: SOCIAL.map((s) => s.href),
+		},
+	}).replaceAll('<', '\\u003c')
+
+const fmtLadder = (ladder: number[]) =>
+	'1 in ' + ladder.map((n) => n.toLocaleString('en-US')).join(' → ')
+
+// Brand marks are from Simple Icons (CC0). Instagram and the globe are drawn as outlines.
+const SOCIAL = [
+	{
+		label: 'X',
+		href: 'https://x.com/mehulmpt',
+		icon: '<path fill="currentColor" d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>',
+	},
+	{
+		label: 'YouTube',
+		href: 'https://youtube.com/@mehulmpt',
+		icon: '<path fill="currentColor" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>',
+	},
+	{
+		label: 'LinkedIn',
+		href: 'https://linkedin.com/in/mehulmpt',
+		icon: '<path fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>',
+	},
+	{
+		label: 'Instagram',
+		href: 'https://instagram.com/mehulmpt',
+		icon: '<g fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.3"/></g><circle cx="17.6" cy="6.4" r="1.4" fill="currentColor"/>',
+	},
+	{
+		label: 'GitHub',
+		href: 'https://github.com/mehulmpt',
+		icon: '<path fill="currentColor" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>',
+	},
+	{
+		label: 'Website',
+		href: 'https://mehulmohan.com',
+		icon: '<g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4.2" ry="10"/><path d="M2 12h20"/></g>',
+	},
+]
+
+const socialLinks = () =>
+	SOCIAL.map(
+		(s) =>
+			`<a href="${s.href}" target="_blank" rel="noopener noreferrer" aria-label="${s.label}" title="${s.label}"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">${s.icon}</svg></a>`,
+	).join('\n\t\t\t')
+
+const html = ({
+	nonce,
+	siteKey,
+	ladder,
+}: {
+	nonce: string
+	siteKey: string
+	ladder: number[]
+}) => `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Code guest passes · claudepass</title>
+<meta name="description" content="Win a free week of Claude Code. Mehul is giving away 3 guest passes: pick a ticket, one pull per hour, long odds. Winners get the pass by email.">
+<meta name="author" content="Mehul Mohan">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#0e0e11">
+<meta name="color-scheme" content="dark">
+<link rel="canonical" href="${SITE}/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="claudepass">
+<meta property="og:url" content="${SITE}/">
+<meta property="og:title" content="Claude Code guest passes">
+<meta property="og:description" content="3 free weeks of Claude Code up for grabs. Pick a ticket, one pull per hour. Odds: ${fmtLadder(ladder)}.">
+<meta property="og:image" content="${SITE}/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:alt" content="Three Claude Code guest pass tickets, one glowing orange.">
+<meta property="og:locale" content="en_US">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@mehulmpt">
+<meta name="twitter:creator" content="@mehulmpt">
+<meta name="twitter:title" content="Claude Code guest passes">
+<meta name="twitter:description" content="3 free weeks of Claude Code up for grabs. Pick a ticket, one pull per hour, long odds.">
+<meta name="twitter:image" content="${SITE}/og.png">
+<meta name="twitter:image:alt" content="Three Claude Code guest pass tickets, one glowing orange.">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<script type="application/ld+json" nonce="${nonce}">${jsonLd(ladder)}</script>
+<style nonce="${nonce}">
+:root {
+	--bg: #0e0e11; --panel: #1b1b20; --line: #34343d; --line-soft: #2a2a31;
+	--text: #e6e6ea; --muted: #8a8a96; --dim: #5d5d68;
+	--lav: #a8a8f0; --orange: #d97757; --green: #7ec699; --red: #e2777a;
+	--mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+	--sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	color-scheme: dark;
+}
+* { box-sizing: border-box; }
+::selection { background: rgba(217, 119, 87, .38); color: #fff; }
+input::selection { background: rgba(217, 119, 87, .45); color: #fff; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); }
+body { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
+.wrap { width: min(720px, 100%); }
+.term {
+	width: 100%; background: var(--panel); border: 1px solid var(--line);
+	border-radius: 14px; overflow: hidden; box-shadow: 0 30px 80px -30px #000;
+}
+.body { padding: 28px 32px 24px; border-top: 2px solid var(--lav); margin: 0 0 0; }
+h1 { font-size: 18px; font-weight: 500; color: var(--lav); margin: 0; }
+.left { color: var(--muted); font-size: 16px; margin: 4px 0 0; min-height: 1.4em; }
+
+.tickets { display: flex; flex-wrap: wrap; gap: 20px; margin: 32px 0 28px; }
+.ticket {
+	position: relative; font: inherit; font-size: 17px; color: var(--text); background: transparent;
+	border: 1.5px solid #8b8b97; border-radius: 2px; padding: 14px 20px; cursor: pointer;
+	transition: transform .18s ease, border-color .18s ease, color .18s ease, opacity .3s ease;
+	white-space: pre; user-select: none;
+}
+/* notch the side borders so the box reads like the CLI ticket */
+.ticket::before, .ticket::after {
+	content: ""; position: absolute; top: 30%; bottom: 30%; width: 4px; background: var(--panel);
+}
+.ticket::before { left: -3px; } .ticket::after { right: -3px; }
+.ticket .star { color: var(--orange); display: inline-block; }
+.ticket .cut { color: var(--dim); }
+.ticket:hover:not(:disabled), .ticket.sel:not(:disabled) { border-color: var(--lav); transform: translateY(-2px); }
+.ticket:focus-visible { outline: 2px solid var(--lav); outline-offset: 4px; }
+.ticket:disabled { cursor: default; }
+.tickets.locked .ticket:not(.chosen) { opacity: .35; }
+.ticket.rolling { border-color: var(--lav); animation: jitter .12s steps(2) infinite; }
+.ticket.rolling .star { animation: spin 1s linear infinite; }
+.ticket.won { border-color: var(--orange); color: var(--orange); box-shadow: 0 0 0 4px #d977571f, 0 0 32px -6px #d97757aa; }
+.ticket.won .star { animation: pop .5s ease; }
+.ticket.lost { border-color: var(--dim); color: var(--dim); }
+.ticket.lost .star { color: var(--dim); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes jitter { 0% { transform: translate(-1px, -2px); } 100% { transform: translate(1px, -1px); } }
+@keyframes pop { 0% { transform: scale(.4); } 60% { transform: scale(1.6); } 100% { transform: scale(1); } }
+
+.out { font-size: 15px; line-height: 1.7; min-height: 3.4em; }
+.out p { margin: 0; }
+.out .ok { color: var(--green); } .out .bad { color: var(--red); } .out .warn { color: var(--orange); }
+.out .m { color: var(--muted); }
+.spin { color: var(--orange); display: inline-block; width: 1.4ch; }
+
+form { display: flex; align-items: center; gap: 10px; margin-top: 14px; border: 1px solid var(--line);
+	border-radius: 8px; padding: 10px 12px; background: #16161a; }
+form:focus-within { border-color: #4a4a58; }
+form[hidden] { display: none; }
+form .p { color: var(--lav); }
+input { flex: 1; min-width: 0; font: inherit; font-size: 15px; color: var(--text); background: transparent; border: 0; outline: 0; caret-color: var(--orange); }
+input::placeholder { color: var(--dim); }
+form button { font: inherit; font-size: 13px; background: var(--orange); color: #141414; border: 0; border-radius: 6px; padding: 7px 12px; cursor: pointer; font-weight: 600; }
+form button:disabled { opacity: .5; cursor: default; }
+
+.hint { margin: 28px 0 0; font-size: 14px; color: var(--muted); font-style: italic; }
+.status {
+	display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 12px 20px; border-top: 1px solid var(--line-soft);
+	color: var(--muted); font-size: 13px; font-family: var(--sans);
+}
+.status .dot { color: var(--green); }
+#ts { margin-top: 12px; }
+.meta { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; margin: 14px 0 0; padding: 0 6px; }
+.fine { color: var(--dim); font-size: 12px; line-height: 1.6; margin: 0; }
+.src {
+	display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0;
+	font: 500 12.5px var(--sans); color: var(--text); text-decoration: none;
+	padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: #16161a;
+	transition: border-color .15s ease, color .15s ease;
+}
+.src:hover { border-color: var(--lav); color: var(--lav); }
+.src:focus-visible { outline: 2px solid var(--lav); outline-offset: 2px; }
+
+.site {
+	display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+	margin-top: 28px; padding: 16px 6px 0; border-top: 1px solid var(--line-soft);
+	font-family: var(--sans); font-size: 13px; color: var(--muted);
+}
+.site .by { display: flex; align-items: center; gap: 8px; }
+.site .by .star { color: var(--orange); font-family: var(--mono); }
+.site .by a { color: var(--text); text-decoration: none; font-weight: 500; }
+.site .by a:hover { color: var(--orange); }
+.site .handle { color: var(--dim); }
+.social { display: flex; gap: 4px; }
+.social a {
+	display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px;
+	color: var(--muted); transition: color .15s ease, background .15s ease;
+}
+.social a:hover { color: var(--text); background: #ffffff0d; }
+.social a:focus-visible { outline: 2px solid var(--lav); outline-offset: 1px; }
+.legal { flex-basis: 100%; margin: 2px 0 0; font-size: 11.5px; line-height: 1.6; color: var(--dim); }
+
+/* --- winner celebration --- */
+.fx { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 50; }
+.flash {
+	position: fixed; inset: 0; pointer-events: none; z-index: 49;
+	background: radial-gradient(circle at 50% 45%, #fff 0%, #ffd9c9 18%, #d9775788 45%, transparent 75%);
+	animation: flash .7s ease-out forwards;
+}
+@keyframes flash { 0% { opacity: .95; } 100% { opacity: 0; } }
+.banner {
+	position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 51;
+}
+.banner span {
+	font: 700 clamp(44px, 11vw, 128px)/1 var(--mono); letter-spacing: -2px; color: var(--orange);
+	text-shadow: 0 0 24px #d97757cc, 0 0 80px #d9775799, 0 6px 0 #7a3a24;
+	animation: banner 2.8s cubic-bezier(.2, 1.6, .4, 1) forwards;
+}
+@keyframes banner {
+	0% { transform: scale(.1) rotate(-12deg); opacity: 0; }
+	14% { transform: scale(1.15) rotate(3deg); opacity: 1; }
+	22% { transform: scale(1) rotate(0); }
+	70% { transform: scale(1.04); opacity: 1; }
+	100% { transform: scale(1.5); opacity: 0; }
+}
+.term.shake { animation: shake .55s cubic-bezier(.36, .07, .19, .97); }
+@keyframes shake {
+	10%, 90% { transform: translate(-2px, 1px) rotate(-.3deg); }
+	20%, 80% { transform: translate(5px, -2px) rotate(.4deg); }
+	30%, 50%, 70% { transform: translate(-9px, 3px) rotate(-.6deg); }
+	40%, 60% { transform: translate(9px, -3px) rotate(.6deg); }
+}
+.ticket.won.party { animation: glow 1.1s ease-in-out infinite alternate; }
+@keyframes glow {
+	from { box-shadow: 0 0 0 4px #d977571f, 0 0 24px -6px #d97757aa; }
+	to { box-shadow: 0 0 0 8px #d9775733, 0 0 60px 4px #d97757cc; }
+}
+.out .test { color: var(--lav); font-size: 13px; }
+
+@media (max-width: 520px) {
+	.body { padding: 22px 18px 20px; }
+	.tickets { gap: 10px; flex-wrap: nowrap; }
+	.ticket { font-size: 13px; padding: 10px 10px; }
+	.site { justify-content: center; text-align: center; }
+	.legal { text-align: center; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<main class="term">
+	<section class="body">
+		<h1>Guest passes</h1>
+		<p class="left" id="left">&nbsp;</p>
+
+		<div class="tickets" id="tickets" role="radiogroup" aria-label="Pick a ticket">
+			${[0, 1, 2].map((i) => `<button class="ticket" data-i="${i}" role="radio" aria-checked="false" disabled>) CC <span class="star">✻</span> <span class="cut">┆</span> (</button>`).join('\n\t\t\t')}
+		</div>
+
+		<div class="out" id="out" aria-live="polite"></div>
+		<form id="claim" hidden autocomplete="on">
+			<span class="p">&gt;</span>
+			<input id="email" type="email" name="email" placeholder="you@example.com" required autocomplete="email" spellcheck="false">
+			<button type="submit" id="send">Claim</button>
+		</form>
+		<div id="ts"></div>
+
+		<p class="hint" id="hint">← → to pick · Enter to pull · one pull per hour</p>
+	</section>
+	<div class="status">
+		<span>⌂ claudepass.mehulmohan.com</span>
+		<span id="odds">⚄ odds —</span>
+		<span><span class="dot">●</span> 1 pull / hour / network</span>
+	</div>
+</main>
+<div class="meta">
+	<p class="fine">Odds: ${fmtLadder(ladder)}. Winners get their pass from Mehul by email.</p>
+	<a class="src" href="${REPO}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8 6 2 12l6 6M16 6l6 6-6 6"/></svg>View source code</a>
+</div>
+
+<footer class="site">
+	<div class="by">
+		<span class="star">✻</span>
+		<span>made by <a href="https://x.com/mehulmpt" target="_blank" rel="noopener noreferrer">Mehul Mohan</a></span>
+		<span class="handle">@mehulmpt</span>
+	</div>
+	<nav class="social" aria-label="Mehul on social media">
+		${socialLinks()}
+	</nav>
+	<p class="legal">Free to enter. Not affiliated with Anthropic. Claude is a trademark of Anthropic, PBC.</p>
+</footer>
+</div>
+
+<script nonce="${nonce}">
+(() => {
+	const SITE_KEY = "${siteKey}";
+	const $ = (id) => document.getElementById(id);
+	const tickets = [...document.querySelectorAll(".ticket")];
+	const out = $("out"), form = $("claim"), emailIn = $("email"), sendBtn = $("send"), hint = $("hint");
+	let skew = 0;          // server clock - client clock, seconds
+	let sel = 1;
+	let busy = false;
+	let timer = null;
+	let claimToken = null;
+
+	const serverNow = () => Date.now() / 1000 + skew;
+	const fmt = (s) => { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+	const line = ({ cls, text }) => { const p = document.createElement("p"); if (cls) p.className = cls; p.textContent = text; return p; };
+	const say = (lines) => { out.replaceChildren(...lines); };
+
+	function setLeft(n) {
+		$("left").textContent = n === 0 ? "none left" : n + " left";
+	}
+
+	function enable(on) {
+		tickets.forEach((t) => (t.disabled = !on));
+		hint.hidden = !on;
+		if (on) select({ i: sel, focus: false });
+	}
+	function select({ i, focus = true }) {
+		sel = (i + tickets.length) % tickets.length;
+		tickets.forEach((t, j) => { t.classList.toggle("sel", j === sel); t.setAttribute("aria-checked", j === sel); });
+		if (focus) tickets[sel].focus();
+	}
+
+	function countdown({ until, render, done }) {
+		clearInterval(timer);
+		const tick = () => {
+			const left = until - serverNow();
+			if (left <= 0) { clearInterval(timer); done(); return; }
+			render(fmt(left));
+		};
+		tick();
+		timer = setInterval(tick, 250);
+	}
+
+	function cooldown({ nextPlayAt, lead = [] }) {
+		enable(false);
+		const p = line({ cls: "m", text: "" });
+		say([...lead, p]);
+		countdown({ until: nextPlayAt, render: (t) => (p.textContent = "Next pull in " + t + "."), done: reset });
+	}
+
+	function reset() {
+		tickets.forEach((t) => t.classList.remove("chosen", "won", "lost", "rolling"));
+		$("tickets").classList.remove("locked");
+		say([line({ cls: "m", text: "Pick a ticket and test your luck." })]);
+		enable(true);
+	}
+
+	// --- Turnstile ---------------------------------------------------------
+	let widget = null, pending = null;
+	window.onTurnstile = () => {
+		widget = turnstile.render("#ts", {
+			sitekey: SITE_KEY, action: "play", execution: "execute", appearance: "interaction-only", theme: "dark",
+			callback: (tok) => { pending && pending.resolve(tok); pending = null; },
+			"error-callback": () => { pending && pending.reject(new Error("bot check failed")); pending = null; },
+			"expired-callback": () => turnstile.reset(widget),
+		});
+	};
+	function humanToken() {
+		return new Promise((resolve, reject) => {
+			if (!window.turnstile || widget === null) return reject(new Error("bot check still loading"));
+			pending = { resolve, reject };
+			turnstile.reset(widget);
+			turnstile.execute(widget);
+		});
+	}
+
+	// --- API -----------------------------------------------------------------
+	async function api({ path, body }) {
+		const res = await fetch(path, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {});
+		const data = await res.json().catch(() => ({}));
+		if (typeof data.now === "number") skew = data.now - Date.now() / 1000;
+		return { status: res.status, data };
+	}
+
+	const VERBS = ["Shuffling", "Rummaging", "Consulting the RNG", "Peeking", "Unfolding", "Squinting", "Deliberating", "Tearing the perforation"];
+	const FRAMES = ["·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢"];
+	function spinner() {
+		const p = document.createElement("p");
+		const s = document.createElement("span"); s.className = "spin";
+		const v = document.createElement("span"); v.className = "warn";
+		p.append(s, v);
+		say([p]);
+		let f = 0, k = Math.floor(Math.random() * VERBS.length);
+		const id = setInterval(() => {
+			s.textContent = FRAMES[f++ % FRAMES.length];
+			if (f % 9 === 0) k++;
+			v.textContent = VERBS[k % VERBS.length] + "…";
+		}, 110);
+		s.textContent = FRAMES[0]; v.textContent = VERBS[k % VERBS.length] + "…";
+		return () => clearInterval(id);
+	}
+	const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+	// --- winner celebration -------------------------------------------------
+	function celebrate({ from }) {
+		const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+		const amount = reduce ? 0.15 : 1;
+		const COLORS = ["#d97757", "#a8a8f0", "#7ec699", "#f5c46b", "#ef8fb5", "#ffffff", "#7fd3f0"];
+		const rand = (a, b) => a + Math.random() * (b - a);
+		const pick = (list) => list[Math.floor(Math.random() * list.length)];
+
+		const cv = document.createElement("canvas");
+		cv.className = "fx";
+		document.body.append(cv);
+		const g = cv.getContext("2d");
+		let W = 0, H = 0;
+		const resize = () => {
+			const dpr = Math.min(2, window.devicePixelRatio || 1);
+			W = innerWidth; H = innerHeight;
+			cv.width = W * dpr; cv.height = H * dpr;
+			g.setTransform(dpr, 0, 0, dpr, 0, 0);
+		};
+		resize();
+		addEventListener("resize", resize);
+
+		const P = [];
+		const paper = ({ x, y, vx, vy, gravity = 0.24, life }) => P.push({
+			kind: pick(["rect", "rect", "rect", "circle", "star", "ribbon"]),
+			x, y, vx, vy, gravity, drag: 0.986,
+			rot: rand(0, 6.28), vr: rand(-0.3, 0.3), tilt: rand(0, 6.28), vt: rand(0.06, 0.24),
+			size: rand(5, 11), color: pick(COLORS), age: 0, life: life || rand(240, 380),
+		});
+
+		function burst({ x, y, angle, spread, speed, count }) {
+			for (let i = 0; i < count * amount; i++) {
+				const a = angle + rand(-spread, spread);
+				const v = speed * rand(0.45, 1.15);
+				paper({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v });
+			}
+		}
+		function rain({ count }) {
+			for (let i = 0; i < count * amount; i++) {
+				paper({ x: rand(0, W), y: rand(-H * 0.7, -10), vx: rand(-1.5, 1.5), vy: rand(1, 3.5), gravity: 0.06, life: 700 });
+			}
+		}
+		function rocket() {
+			P.push({
+				kind: "rocket", x: rand(W * 0.12, W * 0.88), y: H + 10, vx: rand(-1.2, 1.2), vy: -rand(H / 62, H / 48),
+				gravity: 0.2, drag: 0.996, color: pick(COLORS), age: 0, life: 260, size: 3, px: 0, py: 0,
+			});
+		}
+		function sparks({ x, y, color }) {
+			const n = Math.round(80 * amount) + 6;
+			for (let i = 0; i < n; i++) {
+				const a = (i / n) * 6.283 + rand(-0.06, 0.06);
+				const v = rand(2, 8);
+				P.push({
+					kind: "spark", x, y, px: x, py: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, gravity: 0.07, drag: 0.968,
+					color: Math.random() < 0.3 ? "#ffffff" : color, age: 0, life: rand(55, 95), size: rand(1.4, 2.8),
+				});
+			}
+			burst({ x, y, angle: -1.57, spread: 3.14, speed: 6, count: 14 });
+		}
+
+		// Choreography.
+		const r = from.getBoundingClientRect();
+		const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+		const flash = document.createElement("div"); flash.className = "flash"; document.body.append(flash);
+		const banner = document.createElement("div"); banner.className = "banner";
+		const word = document.createElement("span"); word.textContent = "✻ WINNER ✻"; banner.append(word);
+		document.body.append(banner);
+		setTimeout(() => { flash.remove(); }, 800);
+		setTimeout(() => { banner.remove(); }, 2900);
+		if (!reduce) {
+			document.querySelector(".term").classList.add("shake");
+			setTimeout(() => document.querySelector(".term").classList.remove("shake"), 600);
+		}
+		from.classList.add("party");
+		if (navigator.vibrate) navigator.vibrate([90, 40, 90, 40, 220]);
+
+		burst({ x: cx, y: cy, angle: -1.57, spread: 3.14, speed: 17, count: 180 });
+		const cannons = (k) => {
+			burst({ x: 0, y: H, angle: -1.0, spread: 0.32, speed: 24 * k, count: 140 * k });
+			burst({ x: W, y: H, angle: -2.14, spread: 0.32, speed: 24 * k, count: 140 * k });
+		};
+		cannons(1);
+		[350, 700, 1050, 1500].forEach((ms, i) => setTimeout(() => cannons(1 - i * 0.18), ms));
+		for (let i = 0; i < 11; i++) setTimeout(rocket, 250 + i * 260 + rand(0, 140));
+		setTimeout(() => rain({ count: 260 }), 900);
+		setTimeout(() => rain({ count: 220 }), 2100);
+		setTimeout(() => burst({ x: cx, y: cy, angle: -1.57, spread: 3.14, speed: 13, count: 120 }), 1800);
+
+		// Physics + rendering.
+		let last = performance.now(), started = last;
+		function frame(nowMs) {
+			const dt = Math.min(2.5, (nowMs - last) / 16.67);
+			last = nowMs;
+			g.clearRect(0, 0, W, H);
+			for (let i = P.length - 1; i >= 0; i--) {
+				const p = P[i];
+				p.age += dt;
+				p.px = p.x; p.py = p.y;
+				p.vx *= Math.pow(p.drag, dt);
+				p.vy = p.vy * Math.pow(p.drag, dt) + p.gravity * dt;
+				p.x += p.vx * dt; p.y += p.vy * dt;
+				if (p.kind === "rocket" && p.vy > -1.5) { sparks({ x: p.x, y: p.y, color: p.color }); P.splice(i, 1); continue; }
+				if (p.age > p.life || p.y > H + 60 || p.x < -80 || p.x > W + 80) { P.splice(i, 1); continue; }
+				const fade = Math.min(1, (p.life - p.age) / (p.life * 0.25));
+				g.globalAlpha = Math.max(0, fade);
+				if (p.kind === "spark" || p.kind === "rocket") {
+					g.strokeStyle = p.color; g.lineWidth = p.size; g.lineCap = "round";
+					g.beginPath(); g.moveTo(p.px - p.vx * 1.5, p.py - p.vy * 1.5); g.lineTo(p.x, p.y); g.stroke();
+					continue;
+				}
+				p.rot += p.vr * dt; p.tilt += p.vt * dt;
+				g.save();
+				g.translate(p.x, p.y); g.rotate(p.rot); g.scale(1, Math.cos(p.tilt));
+				g.fillStyle = p.color;
+				if (p.kind === "rect") g.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+				else if (p.kind === "circle") { g.beginPath(); g.arc(0, 0, p.size / 2.6, 0, 6.283); g.fill(); }
+				else if (p.kind === "ribbon") g.fillRect(-p.size * 1.3, -1.2, p.size * 2.6, 2.4);
+				else { g.font = (p.size * 2.2) + "px ui-monospace, Menlo, monospace"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("✻", 0, 0); }
+				g.restore();
+			}
+			g.globalAlpha = 1;
+			if (P.length > 0 || nowMs - started < 3500) requestAnimationFrame(frame);
+			else { cv.remove(); removeEventListener("resize", resize); }
+		}
+		requestAnimationFrame(frame);
+	}
+
+	async function pull(i) {
+		if (busy) return;
+		busy = true;
+		select({ i, focus: false });
+		enable(false);
+		const t = tickets[i];
+		t.classList.add("chosen", "rolling");
+		$("tickets").classList.add("locked");
+		const stop = spinner();
+
+		let res;
+		try {
+			const tok = await humanToken();
+			[res] = await Promise.all([api({ path: "/api/play", body: { turnstile: tok } }), sleep(1800)]);
+		} catch (e) {
+			res = { status: 0, data: { error: e.message || "Network error." } };
+		}
+		stop();
+		t.classList.remove("rolling");
+		busy = false;
+		const d = res.data;
+
+		if (res.status === 200 && d.won) {
+			t.classList.add("won");
+			claimToken = d.token;
+			sessionStorage.setItem("claim", JSON.stringify({ token: d.token, expiresAt: d.expiresAt - skew, test: !!d.test }));
+			showClaim({ expiresAt: d.expiresAt, test: !!d.test });
+			celebrate({ from: t });
+			refreshStatus();
+			return;
+		}
+		if (res.status === 200) {
+			t.classList.add("lost");
+			t.innerHTML = ") -- <span class=\\"star\\">✻</span> <span class=\\"cut\\">┆</span> (";
+			setLeft(d.remaining);
+			cooldown({ nextPlayAt: d.nextPlayAt, lead: [line({ cls: "bad", text: "✗ Empty ticket. No pass this time." })] });
+			return;
+		}
+		if (res.status === 429 && d.nextPlayAt) return cooldown({ nextPlayAt: d.nextPlayAt, lead: [line({ cls: "bad", text: "✗ This network already pulled within the hour." })] });
+		if (res.status === 410) return soldOut();
+		t.classList.remove("chosen");
+		$("tickets").classList.remove("locked");
+		say([line({ cls: "bad", text: "✗ " + (d.message || d.error || "Something went wrong.") }), line({ cls: "m", text: "Try again in a moment." })]);
+		enable(true);
+	}
+
+	function showClaim({ expiresAt, test }) {
+		enable(false);
+		const p = line({ cls: "m", text: "" });
+		const lines = [line({ cls: "ok", text: "✓ It's a pass. One free week of Claude Code is yours." }), p];
+		if (test) lines.push(line({ cls: "test", text: "◇ test mode: nothing is saved and no pass is used" }));
+		say(lines);
+		form.hidden = false;
+		emailIn.focus();
+		countdown({
+			until: expiresAt,
+			render: (t) => (p.textContent = "Enter your email within " + t + ". Mehul will send your pass to this address."),
+			done: () => {
+				form.hidden = true;
+				sessionStorage.removeItem("claim");
+				say([line({ cls: "bad", text: "✗ Time's up. The pass went back into the pool." })]);
+				refreshStatus();
+			},
+		});
+	}
+
+	form.addEventListener("submit", async (e) => {
+		e.preventDefault();
+		if (!claimToken) return;
+		sendBtn.disabled = true; sendBtn.textContent = "Claiming…";
+		const { status, data } = await api({ path: "/api/claim", body: { token: claimToken, email: emailIn.value } }).catch(() => ({ status: 0, data: {} }));
+		sendBtn.disabled = false; sendBtn.textContent = "Claim";
+		if (status === 200) {
+			clearInterval(timer);
+			form.hidden = true;
+			sessionStorage.removeItem("claim");
+			claimToken = null;
+			say([
+				line({ cls: "ok", text: "✓ Claimed for " + emailIn.value.trim() + "." }),
+				line({ cls: "m", text: "A confirmation is on its way from giveaway@mehulmohan.com (check spam). Mehul will email you the pass personally." }),
+			]);
+			return;
+		}
+		const prev = out.querySelector(".bad"); if (prev) prev.remove();
+		out.append(line({ cls: "bad", text: "✗ " + (data.message || data.error || "Couldn't send. Try again.") }));
+		if (status === 410 || status === 409 && /already claimed/.test(data.error || "")) { form.hidden = true; clearInterval(timer); sessionStorage.removeItem("claim"); }
+	});
+
+	function soldOut() {
+		enable(false);
+		$("tickets").classList.add("locked");
+		setLeft(0);
+		say([line({ cls: "warn", text: "All passes have been claimed. Thanks for playing." })]);
+	}
+
+	function showOdds(oneIn) {
+		if (typeof oneIn === "number") $("odds").textContent = "⚄ odds 1 in " + oneIn.toLocaleString("en-US");
+	}
+
+	async function refreshStatus() {
+		const { data } = await api({ path: "/api/status" });
+		if (typeof data.remaining === "number") setLeft(data.remaining);
+		showOdds(data.oddsOneIn);
+	}
+
+	// --- keyboard ------------------------------------------------------------
+	tickets.forEach((t, i) => t.addEventListener("click", () => pull(i)));
+	document.addEventListener("keydown", (e) => {
+		if (e.target === emailIn || tickets[0].disabled) return;
+		if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); select({ i: sel + 1 }); }
+		else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); select({ i: sel - 1 }); }
+		else if (e.key === "Enter" && !tickets.includes(document.activeElement)) { e.preventDefault(); pull(sel); }
+	});
+
+	// --- boot ----------------------------------------------------------------
+	(async () => {
+		const { status, data } = await api({ path: "/api/status" }).catch(() => ({ status: 0, data: {} }));
+		if (status !== 200) { say([line({ cls: "bad", text: "✗ " + (data.message || "Couldn't reach the server.") }), line({ cls: "m", text: "Reload the page in a minute." })]); return; }
+		showOdds(data.oddsOneIn);
+		setLeft(data.remaining ?? 0);
+
+		const saved = JSON.parse(sessionStorage.getItem("claim") || "null");
+		if (saved && saved.expiresAt + skew > serverNow()) {
+			claimToken = saved.token;
+			tickets[sel].classList.add("chosen", "won");
+			$("tickets").classList.add("locked");
+			return showClaim({ expiresAt: saved.expiresAt + skew, test: !!saved.test });
+		}
+		sessionStorage.removeItem("claim");
+
+		if (!data.open) { say([line({ cls: "m", text: "The giveaway isn't open yet. Check back soon." })]); return; }
+		if (data.remaining === 0) return soldOut();
+		if (data.nextPlayAt) return cooldown({ nextPlayAt: data.nextPlayAt, lead: [line({ cls: "m", text: "You've already pulled this hour." })] });
+		reset();
+	})();
+})();
+</script>
+<script nonce="${nonce}" src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstile" async defer></script>
+</body>
+</html>`

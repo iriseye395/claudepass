@@ -1,0 +1,14 @@
+# Only install package versions that have been public for at least 7 days (in minutes).
+minimumReleaseAge: 10080
+minimumReleaseAgeStrict: true
+
+# Always save exact versions (no ^ or ~).
+saveExact: true
+
+# Packages allowed to run install scripts.
+allowBuilds:
+    esbuild: true
+    workerd: true
+
+overrides:
+    vite: npm:@voidzero-dev/vite-plus-core@1.4.0
