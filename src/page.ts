@@ -194,23 +194,49 @@ h1 { font-size: 18px; font-weight: 500; color: var(--lav); margin: 0; }
 .out .m { color: var(--muted); }
 .spin { color: var(--orange); display: inline-block; width: 1.4ch; }
 
-form { display: flex; align-items: center; gap: 10px; margin-top: 14px; border: 1px solid var(--line);
+form { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line);
 	border-radius: 8px; padding: 10px 12px; background: #16161a; }
 form:focus-within { border-color: #4a4a58; }
-form[hidden] { display: none; }
 form .p { color: var(--lav); }
 input { flex: 1; min-width: 0; font: inherit; font-size: 15px; color: var(--text); background: transparent; border: 0; outline: 0; caret-color: var(--orange); }
 input::placeholder { color: var(--dim); }
 form button { font: inherit; font-size: 13px; background: var(--orange); color: #141414; border: 0; border-radius: 6px; padding: 7px 12px; cursor: pointer; font-weight: 600; }
 form button:disabled { opacity: .5; cursor: default; }
 
-.hint { margin: 28px 0 0; font-size: 14px; color: var(--muted); font-style: italic; }
+.hint { margin: 0; align-self: end; padding-bottom: 2px; font-size: 14px; color: var(--muted); font-style: italic; }
+
+/* The hint, claim form and Turnstile share one fixed-height slot, so swapping between
+   them never changes the card's height (no layout shift). */
+.slot { display: grid; margin-top: 14px; min-height: 48px; }
+.slot > * { grid-area: 1 / 1; }
+.off { visibility: hidden; }
+
+/* Skeletons: same box size as the content that replaces them. */
+.sk {
+	display: inline-block; height: .85em; vertical-align: -.08em; border-radius: 4px;
+	background: linear-gradient(90deg, #25252c 25%, #34343e 50%, #25252c 75%) 0 0 / 300% 100%;
+	animation: sk 1.4s ease-in-out infinite;
+}
+@keyframes sk { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.sk.w-left { width: 6ch; }
+.sk.w-a { width: min(34ch, 80%); }
+.sk.w-b { width: min(22ch, 55%); }
+.sk.w-odds { width: 4.8em; }
+.sk.w-pulls { width: 8.5em; }
+.tickets.loading .ticket { color: transparent; border-color: #3a3a44; }
+.tickets.loading .ticket .star, .tickets.loading .ticket .cut { color: transparent; }
+.tickets.loading .ticket {
+	background: linear-gradient(90deg, transparent 25%, #ffffff0a 50%, transparent 75%) 0 0 / 300% 100%;
+	animation: sk 1.4s ease-in-out infinite;
+}
 .status {
 	display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 12px 20px; border-top: 1px solid var(--line-soft);
 	color: var(--muted); font-size: 13px; font-family: var(--sans);
 }
 .status .dot { color: var(--green); }
-#ts { margin-top: 12px; }
+#ts { align-self: start; }
+#odds { display: inline-block; min-width: 8.3em; }
+#pulls { display: inline-block; min-width: 10em; }
 .meta { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; margin: 14px 0 0; padding: 0 6px; }
 .fine { color: var(--dim); font-size: 12px; line-height: 1.6; margin: 0; }
 .src {
@@ -293,26 +319,28 @@ form button:disabled { opacity: .5; cursor: default; }
 <main class="term">
 	<section class="body">
 		<h1>Guest passes</h1>
-		<p class="left" id="left">&nbsp;</p>
+		<p class="left" id="left"><span class="sk w-left"></span></p>
 
-		<div class="tickets" id="tickets" role="radiogroup" aria-label="Pick a ticket">
+		<div class="tickets loading" id="tickets" role="radiogroup" aria-label="Pick a ticket">
 			${[0, 1, 2].map((i) => `<button class="ticket" data-i="${i}" role="radio" aria-checked="false" disabled>) CC <span class="star">✻</span> <span class="cut">┆</span> (</button>`).join('\n\t\t\t')}
 		</div>
 
-		<div class="out" id="out" aria-live="polite"></div>
-		<form id="claim" hidden autocomplete="on">
-			<span class="p">&gt;</span>
-			<input id="email" type="email" name="email" placeholder="you@example.com" required autocomplete="email" spellcheck="false">
-			<button type="submit" id="send">Claim</button>
-		</form>
-		<div id="ts"></div>
-
-		<p class="hint" id="hint">← → to pick · Enter to pull · one pull per hour</p>
+		<div class="out" id="out" aria-live="polite"><p><span class="sk w-a"></span></p><p><span class="sk w-b"></span></p></div>
+		<div class="slot">
+			<p class="hint off" id="hint">← → to pick · Enter to pull · one pull per hour</p>
+			<form id="claim" class="off" autocomplete="on">
+				<span class="p">&gt;</span>
+				<input id="email" type="email" name="email" placeholder="you@example.com" required autocomplete="email" spellcheck="false">
+				<button type="submit" id="send">Claim</button>
+			</form>
+			<div id="ts"></div>
+		</div>
 	</section>
 	<div class="status">
 		<span>⌂ claudepass.mehulmohan.com</span>
-		<span id="odds">⚄ odds —</span>
+		<span id="odds">⚄ odds <span class="sk w-odds"></span></span>
 		<span><span class="dot">●</span> 1 pull / hour / network</span>
+		<span id="pulls">⟳ <span class="sk w-pulls"></span></span>
 	</div>
 </main>
 <div class="meta">
@@ -356,7 +384,7 @@ form button:disabled { opacity: .5; cursor: default; }
 
 	function enable(on) {
 		tickets.forEach((t) => (t.disabled = !on));
-		hint.hidden = !on;
+		hint.classList.toggle("off", !on);
 		if (on) select({ i: sel, focus: false });
 	}
 	function select({ i, focus = true }) {
@@ -582,6 +610,7 @@ form button:disabled { opacity: .5; cursor: default; }
 			res = { status: 0, data: { error: e.message || "Network error." } };
 		}
 		stop();
+		refreshStatus();
 		t.classList.remove("rolling");
 		busy = false;
 		const d = res.data;
@@ -592,7 +621,6 @@ form button:disabled { opacity: .5; cursor: default; }
 			sessionStorage.setItem("claim", JSON.stringify({ token: d.token, expiresAt: d.expiresAt - skew, test: !!d.test }));
 			showClaim({ expiresAt: d.expiresAt, test: !!d.test });
 			celebrate({ from: t });
-			refreshStatus();
 			return;
 		}
 		if (res.status === 200) {
@@ -616,13 +644,13 @@ form button:disabled { opacity: .5; cursor: default; }
 		const lines = [line({ cls: "ok", text: "✓ It's a pass. One free week of Claude Code is yours." }), p];
 		if (test) lines.push(line({ cls: "test", text: "◇ test mode: nothing is saved and no pass is used" }));
 		say(lines);
-		form.hidden = false;
+		form.classList.remove("off");
 		emailIn.focus();
 		countdown({
 			until: expiresAt,
 			render: (t) => (p.textContent = "Enter your email within " + t + ". Mehul will send your pass to this address."),
 			done: () => {
-				form.hidden = true;
+				form.classList.add("off");
 				sessionStorage.removeItem("claim");
 				say([line({ cls: "bad", text: "✗ Time's up. The pass went back into the pool." })]);
 				refreshStatus();
@@ -638,7 +666,7 @@ form button:disabled { opacity: .5; cursor: default; }
 		sendBtn.disabled = false; sendBtn.textContent = "Claim";
 		if (status === 200) {
 			clearInterval(timer);
-			form.hidden = true;
+			form.classList.add("off");
 			sessionStorage.removeItem("claim");
 			claimToken = null;
 			say([
@@ -649,7 +677,7 @@ form button:disabled { opacity: .5; cursor: default; }
 		}
 		const prev = out.querySelector(".bad"); if (prev) prev.remove();
 		out.append(line({ cls: "bad", text: "✗ " + (data.message || data.error || "Couldn't send. Try again.") }));
-		if (status === 410 || status === 409 && /already claimed/.test(data.error || "")) { form.hidden = true; clearInterval(timer); sessionStorage.removeItem("claim"); }
+		if (status === 410 || status === 409 && /already claimed/.test(data.error || "")) { form.classList.add("off"); clearInterval(timer); sessionStorage.removeItem("claim"); }
 	});
 
 	function soldOut() {
@@ -657,6 +685,10 @@ form button:disabled { opacity: .5; cursor: default; }
 		$("tickets").classList.add("locked");
 		setLeft(0);
 		say([line({ cls: "warn", text: "All passes have been claimed. Thanks for playing." })]);
+	}
+
+	function showPulls(n) {
+		if (typeof n === "number") $("pulls").textContent = "⟳ " + n.toLocaleString("en-US") + (n === 1 ? " pull" : " pulls") + " in 24h";
 	}
 
 	function showOdds(oneIn) {
@@ -667,6 +699,7 @@ form button:disabled { opacity: .5; cursor: default; }
 		const { data } = await api({ path: "/api/status" });
 		if (typeof data.remaining === "number") setLeft(data.remaining);
 		showOdds(data.oddsOneIn);
+		showPulls(data.pulls24h);
 	}
 
 	// --- keyboard ------------------------------------------------------------
@@ -681,8 +714,16 @@ form button:disabled { opacity: .5; cursor: default; }
 	// --- boot ----------------------------------------------------------------
 	(async () => {
 		const { status, data } = await api({ path: "/api/status" }).catch(() => ({ status: 0, data: {} }));
-		if (status !== 200) { say([line({ cls: "bad", text: "✗ " + (data.message || "Couldn't reach the server.") }), line({ cls: "m", text: "Reload the page in a minute." })]); return; }
+		$("tickets").classList.remove("loading");
+		if (status !== 200) {
+			$("left").textContent = "—";
+			$("odds").textContent = "⚄ odds —";
+			$("pulls").textContent = "⟳ —";
+			say([line({ cls: "bad", text: "✗ " + (data.message || "Couldn't reach the server.") }), line({ cls: "m", text: "Reload the page in a minute." })]);
+			return;
+		}
 		showOdds(data.oddsOneIn);
+		showPulls(data.pulls24h);
 		setLeft(data.remaining ?? 0);
 
 		const saved = JSON.parse(sessionStorage.getItem("claim") || "null");

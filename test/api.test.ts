@@ -327,3 +327,17 @@ describe('test mode', () => {
 		expect((await play({ ip: nextIp() })).data.won).toBe(false)
 	})
 })
+
+describe('status', () => {
+	it('counts real pulls from the last 24 hours only', async () => {
+		const t = Math.floor(Date.now() / 1000)
+		await env.DB.batch([
+			env.DB.prepare(
+				"INSERT INTO plays (ip_key, ip, won, created_at) VALUES ('a', 'a', 0, ?1), ('b', 'b', 0, ?2), ('c', 'c', 0, ?3)",
+			).bind(t - 60, t - 86_000, t - 90_000),
+		])
+		const res = await api({ path: '/api/status', ip: nextIp() })
+		const body = z.object({ pulls24h: z.number() }).parse(await res.json())
+		expect(body.pulls24h).toBe(2)
+	})
+})

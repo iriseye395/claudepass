@@ -119,6 +119,17 @@ async function remainingPasses(t: number): Promise<number> {
 	return Math.max(0, cfg().TOTAL_PASSES - (row?.n ?? 0))
 }
 
+/** Real pulls in the last 24 hours (test mode never writes, so it isn't counted). */
+async function pullsLastDay(t: number): Promise<number> {
+	const row = await first({
+		stmt: env.DB.prepare(
+			'SELECT COUNT(*) AS n FROM plays WHERE created_at > ?1',
+		).bind(t - 86_400),
+		schema: CountRow,
+	})
+	return row?.n ?? 0
+}
+
 async function nextPlayAt(key: string): Promise<number | null> {
 	const row = await first({
 		stmt: env.DB.prepare(
@@ -162,9 +173,10 @@ async function status(req: Request): Promise<Response> {
 	const key = ip ? ipKey(ip) : null
 	const t = now()
 	const { OPEN, TOTAL_PASSES, WIN_ODDS } = cfg()
-	const [remaining, next] = await Promise.all([
+	const [remaining, next, pulls24h] = await Promise.all([
 		remainingPasses(t),
 		key && !isTestNetwork(key) ? nextPlayAt(key) : null,
+		pullsLastDay(t),
 	])
 	return json({
 		body: {
@@ -176,6 +188,7 @@ async function status(req: Request): Promise<Response> {
 				taken: TOTAL_PASSES - remaining,
 			}),
 			nextPlayAt: next,
+			pulls24h,
 			now: t,
 		},
 	})
