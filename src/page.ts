@@ -234,6 +234,8 @@ form button:disabled { opacity: .5; cursor: default; }
 	color: var(--muted); font-size: 13px; font-family: var(--sans);
 }
 .status .dot { color: var(--green); }
+#pulls, #odds { transition: color .6s ease; }
+.bump { color: var(--lav); transition: none !important; }
 #ts { align-self: start; }
 #odds { display: inline-block; min-width: 8.3em; }
 #pulls { display: inline-block; min-width: 10em; }
@@ -687,8 +689,17 @@ form button:disabled { opacity: .5; cursor: default; }
 		say([line({ cls: "warn", text: "All passes have been claimed. Thanks for playing." })]);
 	}
 
+	function bump(el) {
+		el.classList.add("bump");
+		requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove("bump")));
+	}
+
+	let lastPulls = null;
 	function showPulls(n) {
-		if (typeof n === "number") $("pulls").textContent = "⟳ " + n.toLocaleString("en-US") + (n === 1 ? " pull" : " pulls") + " in 24h";
+		if (typeof n !== "number") return;
+		$("pulls").textContent = "⟳ " + n.toLocaleString("en-US") + (n === 1 ? " pull" : " pulls") + " so far";
+		if (lastPulls !== null && n !== lastPulls) bump($("pulls"));
+		lastPulls = n;
 	}
 
 	function showOdds(oneIn) {
@@ -699,8 +710,23 @@ form button:disabled { opacity: .5; cursor: default; }
 		const { data } = await api({ path: "/api/status" });
 		if (typeof data.remaining === "number") setLeft(data.remaining);
 		showOdds(data.oddsOneIn);
-		showPulls(data.pulls24h);
+		showPulls(data.pulls);
 	}
+
+	// --- live counters ---------------------------------------------------------
+	// Poll the edge-cached stats while the tab is visible. No clock data here: the
+	// cached response can be a few seconds old.
+	async function pollStats() {
+		if (document.hidden) return;
+		const { status, data } = await api({ path: "/api/stats" }).catch(() => ({ status: 0, data: {} }));
+		if (status !== 200) return;
+		showPulls(data.pulls);
+		showOdds(data.oddsOneIn);
+		if (typeof data.remaining === "number") setLeft(data.remaining);
+		if (data.remaining === 0 && !busy && !claimToken) soldOut();
+	}
+	setInterval(pollStats, 10000);
+	document.addEventListener("visibilitychange", () => { if (!document.hidden) pollStats(); });
 
 	// --- keyboard ------------------------------------------------------------
 	tickets.forEach((t, i) => t.addEventListener("click", () => pull(i)));
@@ -723,7 +749,7 @@ form button:disabled { opacity: .5; cursor: default; }
 			return;
 		}
 		showOdds(data.oddsOneIn);
-		showPulls(data.pulls24h);
+		showPulls(data.pulls);
 		setLeft(data.remaining ?? 0);
 
 		const saved = JSON.parse(sessionStorage.getItem("claim") || "null");

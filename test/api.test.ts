@@ -329,15 +329,34 @@ describe('test mode', () => {
 })
 
 describe('status', () => {
-	it('counts real pulls from the last 24 hours only', async () => {
+	it('counts every real pull', async () => {
 		const t = Math.floor(Date.now() / 1000)
-		await env.DB.batch([
-			env.DB.prepare(
-				"INSERT INTO plays (ip_key, ip, won, created_at) VALUES ('a', 'a', 0, ?1), ('b', 'b', 0, ?2), ('c', 'c', 0, ?3)",
-			).bind(t - 60, t - 86_000, t - 90_000),
-		])
+		await env.DB.prepare(
+			"INSERT INTO plays (ip_key, ip, won, created_at) VALUES ('a', 'a', 0, ?1), ('b', 'b', 0, ?2), ('c', 'c', 0, ?3)",
+		)
+			.bind(t - 60, t - 86_000, t - 9_000_000)
+			.run()
 		const res = await api({ path: '/api/status', ip: nextIp() })
-		const body = z.object({ pulls24h: z.number() }).parse(await res.json())
-		expect(body.pulls24h).toBe(2)
+		const body = z.object({ pulls: z.number() }).parse(await res.json())
+		expect(body.pulls).toBe(3)
+	})
+})
+
+describe('live stats', () => {
+	it('serves only global numbers, cached briefly at the edge', async () => {
+		const res = await SELF.fetch(`${ORIGIN}/api/stats`)
+		// Browsers must never cache it; only the edge does (s-maxage on the stored copy).
+		expect(res.headers.get('cache-control')).toBe('no-store')
+		expect(res.headers.get('x-generated-at')).toMatch(/^\d+$/)
+		// strict(): no per-visitor fields (cooldown, clock) may leak into a cached response.
+		z.object({
+			open: z.boolean(),
+			remaining: z.number(),
+			total: z.number(),
+			oddsOneIn: z.number(),
+			pulls: z.number(),
+		})
+			.strict()
+			.parse(await res.json())
 	})
 })

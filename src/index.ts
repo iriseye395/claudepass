@@ -119,12 +119,10 @@ async function remainingPasses(t: number): Promise<number> {
 	return Math.max(0, cfg().TOTAL_PASSES - (row?.n ?? 0))
 }
 
-/** Real pulls in the last 24 hours (test mode never writes, so it isn't counted). */
-async function pullsLastDay(t: number): Promise<number> {
+/** Every real pull so far (test mode never writes, so it isn't counted). */
+async function totalPulls(): Promise<number> {
 	const row = await first({
-		stmt: env.DB.prepare(
-			'SELECT COUNT(*) AS n FROM plays WHERE created_at > ?1',
-		).bind(t - 86_400),
+		stmt: env.DB.prepare('SELECT COUNT(*) AS n FROM plays'),
 		schema: CountRow,
 	})
 	return row?.n ?? 0
@@ -167,31 +165,61 @@ async function verifyTurnstile({
 	)
 }
 
-// GET /api/status
+/** Global numbers only: identical for every visitor, so safe to cache at the edge. */
+async function stats(t: number) {
+	const { OPEN, TOTAL_PASSES, WIN_ODDS } = cfg()
+	const [remaining, pulls] = await Promise.all([
+		remainingPasses(t),
+		totalPulls(),
+	])
+	return {
+		open: OPEN,
+		remaining,
+		total: TOTAL_PASSES,
+		oddsOneIn: oddsOneIn({
+			ladder: WIN_ODDS,
+			taken: TOTAL_PASSES - remaining,
+		}),
+		pulls,
+	}
+}
+
+// GET /api/status: stats plus this network's cooldown and the server clock.
 async function status(req: Request): Promise<Response> {
 	const ip = clientIp(req)
 	const key = ip ? ipKey(ip) : null
 	const t = now()
-	const { OPEN, TOTAL_PASSES, WIN_ODDS } = cfg()
-	const [remaining, next, pulls24h] = await Promise.all([
-		remainingPasses(t),
+	const [global, next] = await Promise.all([
+		stats(t),
 		key && !isTestNetwork(key) ? nextPlayAt(key) : null,
-		pullsLastDay(t),
 	])
-	return json({
-		body: {
-			open: OPEN,
-			remaining,
-			total: TOTAL_PASSES,
-			oddsOneIn: oddsOneIn({
-				ladder: WIN_ODDS,
-				taken: TOTAL_PASSES - remaining,
-			}),
-			nextPlayAt: next,
-			pulls24h,
-			now: t,
-		},
-	})
+	return json({ body: { ...global, nextPlayAt: next, now: t } })
+}
+
+const STATS_TTL_SECONDS = 5
+
+// GET /api/stats: polled by every open page to keep the counters live. Cached per
+// Cloudflare location for a few seconds, so D1 sees at most one query per location
+// per TTL no matter how many people are watching.
+async function cachedStats(ctx: ExecutionContext): Promise<Response> {
+	const cache = caches.default
+	const cacheKey = new Request(`https://${HOST}/api/stats`)
+	let res = await cache.match(cacheKey)
+	if (!res) {
+		res = json({
+			body: await stats(now()),
+			headers: {
+				// Edge TTL only. The zone's Browser Cache TTL would otherwise stretch
+				// max-age on cache hits, so browsers always get no-store below.
+				'cache-control': `public, s-maxage=${STATS_TTL_SECONDS}`,
+				'x-generated-at': String(now()),
+			},
+		})
+		ctx.waitUntil(cache.put(cacheKey, res.clone()))
+	}
+	const out = new Response(res.body, res)
+	out.headers.set('cache-control', 'no-store')
+	return out
 }
 
 // POST /api/play
@@ -524,6 +552,10 @@ export default {
 				ladder: cfg().WIN_ODDS,
 			})
 		}
+		// Cached and identical for everyone, so it skips the per-network rate limiter.
+		if (url.pathname === '/api/stats' && req.method === 'GET')
+			return cachedStats(ctx)
+
 		const isRead = url.pathname === '/api/status'
 		const isWrite =
 			url.pathname === '/api/play' || url.pathname === '/api/claim'
