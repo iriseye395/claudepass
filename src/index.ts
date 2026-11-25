@@ -374,11 +374,10 @@ async function claim({
 		})
 	}
 
+	let messageId: string
 	try {
-		const sent = await sendWinnerEmail(email.address)
-		await env.DB.prepare('UPDATE claims SET message_id = ?1 WHERE id = ?2')
-			.bind(sent.messageId, row.id)
-			.run()
+		const sent = await sendWinnerEmail({ to: email.address })
+		messageId = sent.messageId
 	} catch (err) {
 		console.error('email send failed', describeError(err))
 		// Release the email so the winner can retry with a different address inside the window.
@@ -394,6 +393,14 @@ async function claim({
 			status: 502,
 		})
 	}
+
+	// The email is out, so the claim stands even if recording the message id fails.
+	await env.DB.prepare('UPDATE claims SET message_id = ?1 WHERE id = ?2')
+		.bind(messageId, row.id)
+		.run()
+		.catch((err: unknown) =>
+			console.error('message id not saved', describeError(err)),
+		)
 
 	// Tell Mehul, with everyone who has claimed so far. Best effort: never blocks the winner.
 	ctx.waitUntil(
@@ -446,7 +453,7 @@ async function testClaim({
 	ctx: ExecutionContext
 }): Promise<Response> {
 	try {
-		await sendWinnerEmail(address)
+		await sendWinnerEmail({ to: address, test: true })
 	} catch (err) {
 		console.error('test email send failed', describeError(err))
 		return json({

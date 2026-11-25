@@ -15,8 +15,15 @@ ${inner}
 }
 
 /** Confirmation to the winner. Deliberately contains no pass link: Mehul sends those by hand. */
-export async function sendWinnerEmail(to: string) {
+export async function sendWinnerEmail({
+	to,
+	test = false,
+}: {
+	to: string
+	test?: boolean
+}) {
 	const html = shell(`
+${test ? '<tr><td style="padding:14px 28px;background:#2a2a45;color:#c8c8ff;font-size:13px;">TEST MODE: this is not a real win and no pass was reserved.</td></tr>' : ''}
 <tr><td style="padding:28px 28px 8px;">
 <div style="color:#a8a8f0;font-size:16px;">Guest pass</div>
 <div style="color:#8a8a96;font-size:14px;margin-top:4px;">1 week of Claude Code</div>
@@ -29,7 +36,7 @@ export async function sendWinnerEmail(to: string) {
 Mehul will email you the pass personally at this address once all the winners are in. You don't need to do anything else. Keep an eye on your inbox.
 </td></tr>`)
 
-	const text = `You won a Claude Code guest pass (1 week free).
+	const text = `${test ? 'TEST MODE: this is not a real win and no pass was reserved.\n\n' : ''}You won a Claude Code guest pass (1 week free).
 
 Mehul will email you the pass personally at this address once all the winners are in. You don't need to do anything else.
 
@@ -38,7 +45,7 @@ Mehul will email you the pass personally at this address once all the winners ar
 	return env.EMAIL.send({
 		to,
 		from: FROM(),
-		subject: 'You won a Claude Code guest pass',
+		subject: `${test ? '[TEST] ' : ''}You won a Claude Code guest pass`,
 		html,
 		text,
 	})
