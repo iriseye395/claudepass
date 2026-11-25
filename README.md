@@ -56,3 +56,7 @@ Dependencies are pinned exactly, and pnpm only installs versions published at le
 ## Disclaimer
 
 Free to enter, no purchase necessary. This is a personal giveaway by Mehul Mohan and is not affiliated with, sponsored or endorsed by Anthropic. Claude and Claude Code are trademarks of Anthropic, PBC.
+
+## License
+
+[MIT](LICENSE) © Mehul Mohan

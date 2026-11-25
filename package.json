@@ -28,5 +28,6 @@
 	"packageManager": "pnpm@12.18.0",
 	"dependencies": {
 		"zod": "4.6.7"
-	}
+	},
+	"license": "MIT"
 }
