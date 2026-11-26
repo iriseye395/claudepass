@@ -31,6 +31,9 @@ const cfg = (): Config => (config ??= Config.parse(env))
 
 const now = () => Math.floor(Date.now() / 1000)
 
+// Turnstile hashes are pruned at most once every 5 minutes per isolate.
+let lastTokenCleanup = 0
+
 function json({
 	body,
 	status = 200,
@@ -223,7 +226,7 @@ async function cachedStats(ctx: ExecutionContext): Promise<Response> {
 }
 
 // POST /api/play
-async function play(req: Request): Promise<Response> {
+async function play(req: Request, ctx: ExecutionContext): Promise<Response> {
 	const ip = clientIp(req)
 	const key = ip ? ipKey(ip) : null
 	if (!ip || !key)
@@ -275,6 +278,42 @@ async function play(req: Request): Promise<Response> {
 				now: t,
 			},
 		})
+
+	// 2b. Enforce Turnstile single-use locally. Cloudflare's replay detection is
+	// eventually consistent, so the same token can be validated again from another
+	// network; the UNIQUE token_hash makes the second use lose the race.
+	const consumed = await first({
+		stmt: env.DB.prepare(
+			`INSERT INTO turnstile_tokens (token_hash, created_at)
+			 VALUES (?1, ?2)
+			 ON CONFLICT(token_hash) DO NOTHING
+			 RETURNING token_hash`,
+		).bind(await sha256(body.turnstile), t),
+		schema: z.object({ token_hash: z.string() }),
+	})
+	if (!consumed)
+		return json({
+			body: { error: 'Bot check failed. Reload the page and try again.' },
+			status: 403,
+		})
+
+	// A token is only valid for 5 minutes; keep an hour of hashes around and
+	// prune the rest without blocking the response. Do it at most once every
+	// five minutes per isolate so the cleanup is not a write on every pull.
+	if (t - lastTokenCleanup >= 5 * 60) {
+		lastTokenCleanup = t
+		ctx.waitUntil(
+			env.DB.prepare('DELETE FROM turnstile_tokens WHERE created_at < ?1')
+				.bind(t - 60 * 60)
+				.run()
+				.catch((err: unknown) =>
+					console.error(
+						'turnstile token cleanup failed',
+						describeError(err),
+					),
+				),
+		)
+	}
 
 	// 3. Atomically take this network's play for the cooldown window. If two requests race, only one
 	//    row update succeeds; the other gets nothing back and is rejected.
@@ -588,6 +627,8 @@ export default {
 		}
 
 		if (isRead) return status(req)
-		return url.pathname === '/api/play' ? play(req) : claim({ req, ctx })
+		return url.pathname === '/api/play'
+			? play(req, ctx)
+			: claim({ req, ctx })
 	},
 } satisfies ExportedHandler
