@@ -9,7 +9,7 @@ This repo is public so anyone can check how the draw works.
 ## How the draw works
 
 1. **One pull a minute per network.** Your IP is the key: IPv4 as-is, IPv6 grouped to its `/64` (one subscriber usually controls a whole `/64`, so a per-address limit would be easy to dodge). The check is a single atomic SQL statement, so parallel requests can't sneak in extra pulls.
-2. **Bot check.** Every pull needs a fresh, single-use [Turnstile](https://developers.cloudflare.com/turnstile/) token, verified on the server.
+2. **Bot check.** Every pull needs a fresh, single-use [Turnstile](https://developers.cloudflare.com/turnstile/) token, verified on the server and consumed in D1, so a replay is rejected even while Cloudflare's replay detection catches up.
 3. **The roll.** The server draws from `crypto.getRandomValues`. Odds get harder as passes go:
 
     | Passes   | Odds         |

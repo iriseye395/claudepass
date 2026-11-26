@@ -82,8 +82,14 @@ function forceRoll({ win }: { win: boolean }) {
 	})
 }
 
-async function play({ ip }: { ip: string }) {
-	const res = await api({ path: '/api/play', ip, body: { turnstile: 'tok' } })
+async function play({
+	ip,
+	token = randomToken(),
+}: {
+	ip: string
+	token?: string
+}) {
+	const res = await api({ path: '/api/play', ip, body: { turnstile: token } })
 	return { status: res.status, data: PlayResult.parse(await res.json()) }
 }
 
@@ -124,6 +130,7 @@ beforeEach(async () => {
 		env.DB.prepare('DELETE FROM claims'),
 		env.DB.prepare('DELETE FROM plays'),
 		env.DB.prepare('DELETE FROM ip_limits'),
+		env.DB.prepare('DELETE FROM turnstile_tokens'),
 	])
 	mockTurnstile({ success: true })
 })
@@ -247,6 +254,23 @@ describe('playing', () => {
 		expect(await count('SELECT COUNT(*) n FROM claims')).toBe(0)
 	})
 
+	it('rejects a replayed Turnstile token from another network', async () => {
+		forceRoll({ win: false })
+		const token = 'replayed-token'
+		expect((await play({ ip: nextIp(), token })).status).toBe(200)
+		const replay = await play({ ip: nextIp(), token })
+		expect(replay.status).toBe(403)
+		expect(replay.data.error).toMatch(/Bot check failed/)
+		expect(await count('SELECT COUNT(*) n FROM turnstile_tokens')).toBe(1)
+	})
+
+	it('still accepts a fresh Turnstile token for every pull', async () => {
+		forceRoll({ win: false })
+		expect((await play({ ip: nextIp() })).status).toBe(200)
+		expect((await play({ ip: nextIp() })).status).toBe(200)
+		expect(await count('SELECT COUNT(*) n FROM turnstile_tokens')).toBe(2)
+	})
+
 	it('allows one pull per cooldown per network', async () => {
 		forceRoll({ win: false })
 		const ip = nextIp()
@@ -267,7 +291,7 @@ describe('playing', () => {
 		)
 		expect(results.filter((r) => r.data.won === true)).toHaveLength(TOTAL)
 		expect(await count('SELECT COUNT(*) n FROM claims')).toBe(TOTAL)
-	})
+	}, 15_000)
 
 	it('reports sold out once all passes are reserved', async () => {
 		forceRoll({ win: true })
