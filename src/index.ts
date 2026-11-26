@@ -276,7 +276,7 @@ async function play(req: Request): Promise<Response> {
 			},
 		})
 
-	// 3. Atomically take this network's play for the hour. If two requests race, only one
+	// 3. Atomically take this network's play for the cooldown window. If two requests race, only one
 	//    row update succeeds; the other gets nothing back and is rejected.
 	const took = await first({
 		stmt: env.DB.prepare(
@@ -305,13 +305,15 @@ async function play(req: Request): Promise<Response> {
 	let token: string | null = null
 	if (secureRandom() < 1 / oneIn) {
 		const candidate = randomToken()
-		// Reserve a pass only if one is free and this network hasn't already received one.
+		// Reserve a pass only if one is free and this network holds none: not one already
+		// claimed, and not one still waiting to be claimed (the claim window outlasts the
+		// cooldown, so a network could otherwise win twice before claiming).
 		const reserved = await first({
 			stmt: env.DB.prepare(
 				`INSERT INTO claims (token_hash, ip_key, created_at, expires_at)
 				 SELECT ?1, ?2, ?3, ?4
 				 WHERE (SELECT COUNT(*) FROM claims WHERE redeemed_at IS NOT NULL OR expires_at > ?3) < ?5
-				   AND NOT EXISTS (SELECT 1 FROM claims WHERE ip_key = ?2 AND redeemed_at IS NOT NULL)
+				   AND NOT EXISTS (SELECT 1 FROM claims WHERE ip_key = ?2 AND (redeemed_at IS NOT NULL OR expires_at > ?3))
 				 RETURNING id`,
 			).bind(
 				await sha256(candidate),

@@ -245,7 +245,7 @@ describe('playing', () => {
 		expect(await count('SELECT COUNT(*) n FROM claims')).toBe(0)
 	})
 
-	it('allows one pull per hour per network', async () => {
+	it('allows one pull per cooldown per network', async () => {
 		forceRoll({ win: false })
 		const ip = nextIp()
 		expect((await play({ ip })).status).toBe(200)
@@ -290,14 +290,25 @@ describe('playing', () => {
 			token: p.data.token ?? '',
 			email: 'first@example.com',
 		})
-		// Pretend the hour has passed.
+		// Pretend the cooldown has passed.
 		await env.DB.prepare('UPDATE ip_limits SET last_play_at = 0').run()
 		const again = await play({ ip })
 		expect(again.data.won).toBe(false)
 		expect(await count('SELECT COUNT(*) n FROM claims')).toBe(1)
 	})
 
-	it('rejects a failed bot check without using up the hour', async () => {
+	it('does not let a network hold two unclaimed passes at once', async () => {
+		forceRoll({ win: true })
+		const ip = nextIp()
+		expect((await play({ ip })).data.won).toBe(true)
+		// Cooldown over, but the first pass is still waiting to be claimed.
+		await env.DB.prepare('UPDATE ip_limits SET last_play_at = 0').run()
+		const again = await play({ ip })
+		expect(again.data.won).toBe(false)
+		expect(await count('SELECT COUNT(*) n FROM claims')).toBe(1)
+	})
+
+	it('rejects a failed bot check without using up the cooldown', async () => {
 		vi.restoreAllMocks()
 		mockTurnstile({ success: false })
 		const ip = nextIp()

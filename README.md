@@ -8,7 +8,7 @@ This repo is public so anyone can check how the draw works.
 
 ## How the draw works
 
-1. **One pull per hour per network.** Your IP is the key: IPv4 as-is, IPv6 grouped to its `/64` (one subscriber usually controls a whole `/64`, so a per-address limit would be easy to dodge). The check is a single atomic SQL statement, so parallel requests can't sneak in extra pulls.
+1. **One pull a minute per network.** Your IP is the key: IPv4 as-is, IPv6 grouped to its `/64` (one subscriber usually controls a whole `/64`, so a per-address limit would be easy to dodge). The check is a single atomic SQL statement, so parallel requests can't sneak in extra pulls.
 2. **Bot check.** Every pull needs a fresh, single-use [Turnstile](https://developers.cloudflare.com/turnstile/) token, verified on the server.
 3. **The roll.** The server draws from `crypto.getRandomValues`. Odds get harder as passes go:
 
@@ -20,7 +20,7 @@ This repo is public so anyone can check how the draw works.
 
 4. **Claiming.** A win reserves a pass and returns a random 256-bit token. Only its SHA-256 hash is stored. The token works once, for 5 minutes. If nobody claims it in time, the pass goes back into the pool.
 5. **One pass per inbox and per network.** Gmail dots and `+tags` count as the same inbox.
-6. **Flood guard.** A [Workers Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/) binding gives each network 60 units a minute across the API: `/api/status` costs 1, `/api/play` and `/api/claim` cost 10. It's approximate and counted per Cloudflare location, so it's only a second line of defense; the hourly D1 check above is the strict one.
+6. **Flood guard.** A [Workers Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/) binding gives each network 60 units a minute across the API: `/api/status` costs 1, `/api/play` and `/api/claim` cost 10. It's approximate and counted per Cloudflare location, so it's only a second line of defense; the per-minute D1 check above is the strict one.
 
 **Test mode.** Networks listed in the `TEST_IPS` secret always win so the full flow can be tested on the live site. Test mode never writes to D1 and never uses up a pass, and the page labels it clearly. It's off when the secret is `none`.
 
