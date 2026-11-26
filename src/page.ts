@@ -50,8 +50,33 @@ const jsonLd = (ladder: number[]) =>
 		},
 	}).replaceAll('<', '\\u003c')
 
+/** [10000, 10000, 20000] -> "1 in 10,000 ×2 → 20,000" */
 const fmtLadder = (ladder: number[]) =>
-	'1 in ' + ladder.map((n) => n.toLocaleString('en-US')).join(' → ')
+	'1 in ' +
+	ladder
+		.reduce<{ n: number; times: number }[]>((runs, n) => {
+			const last = runs.at(-1)
+			if (last && last.n === n) last.times++
+			else runs.push({ n, times: 1 })
+			return runs
+		}, [])
+		.map(
+			({ n, times }) =>
+				n.toLocaleString('en-US') + (times > 1 ? ` ×${times}` : ''),
+		)
+		.join(' → ')
+
+/** Who is sharing passes. The total must match TOTAL_PASSES (checked in tests). */
+export const DONORS = [
+	{ handle: 'mehulmpt', passes: 3 },
+	{ handle: 'YashSolanki_', passes: 3 },
+]
+
+const donorList = () =>
+	DONORS.map(
+		(d) =>
+			`<li><a href="https://x.com/${d.handle}" target="_blank" rel="noopener noreferrer">@${d.handle}</a><span class="stars" aria-hidden="true">${'✻'.repeat(d.passes)}</span><span class="n">${d.passes} ${d.passes === 1 ? 'pass' : 'passes'}</span></li>`,
+	).join('')
 
 // Brand marks are from Simple Icons (CC0). Instagram and the globe are drawn as outlines.
 const SOCIAL = [
@@ -150,7 +175,7 @@ const html = ({
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Claude Code guest passes · claudepass</title>
-<meta name="description" content="Win a free week of Claude Code. Mehul is giving away 3 guest passes: pick a ticket, one pull a minute, long odds. Winners get the pass by email.">
+<meta name="description" content="Win a free week of Claude Code. 6 guest passes up for grabs, shared by @mehulmpt and @YashSolanki_: pick a ticket, one pull a minute, long odds. Winners get the pass by email.">
 <meta name="author" content="Mehul Mohan">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="theme-color" content="#0e0e11">
@@ -161,7 +186,7 @@ const html = ({
 <meta property="og:site_name" content="claudepass">
 <meta property="og:url" content="${SITE}/">
 <meta property="og:title" content="Claude Code guest passes">
-<meta property="og:description" content="3 free weeks of Claude Code up for grabs. Pick a ticket, one pull a minute. Odds: ${fmtLadder(ladder)}.">
+<meta property="og:description" content="6 free weeks of Claude Code up for grabs. Pick a ticket, one pull a minute. Odds: ${fmtLadder(ladder)}.">
 <meta property="og:image" content="${SITE}/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -173,7 +198,7 @@ const html = ({
 <meta name="twitter:site" content="@mehulmpt">
 <meta name="twitter:creator" content="@mehulmpt">
 <meta name="twitter:title" content="Claude Code guest passes">
-<meta name="twitter:description" content="3 free weeks of Claude Code up for grabs. Pick a ticket, one pull a minute, long odds.">
+<meta name="twitter:description" content="6 free weeks of Claude Code up for grabs. Pick a ticket, one pull a minute, long odds.">
 <meta name="twitter:image" content="${SITE}/og.png">
 <meta name="twitter:image:alt" content="Three Claude Code guest pass tickets, one glowing orange.">
 
@@ -292,6 +317,21 @@ form button:disabled { opacity: .5; cursor: default; }
 }
 .src:hover { border-color: var(--lav); color: var(--lav); }
 .src:focus-visible { outline: 2px solid var(--lav); outline-offset: 2px; }
+
+.donors {
+	margin: 22px 0 0; padding: 16px 18px; border: 1px solid var(--line-soft); border-radius: 12px;
+	background: #141418;
+}
+.donors h2 { margin: 0 0 10px; font: 500 13px var(--mono); color: var(--lav); }
+.donors ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.donors li { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+.donors li a { color: var(--text); text-decoration: none; min-width: 14ch; }
+.donors li a:hover { color: var(--orange); }
+.donors .stars { color: var(--orange); letter-spacing: 3px; flex: 1; }
+.donors .n { color: var(--muted); font-size: 13px; }
+.donors .add { margin: 12px 0 0; padding-top: 10px; border-top: 1px dashed var(--line-soft); font: 13px var(--sans); color: var(--muted); }
+.donors .add a { color: var(--orange); text-decoration: none; font-weight: 500; }
+.donors .add a:hover { text-decoration: underline; }
 
 .site {
 	display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
@@ -442,9 +482,15 @@ form button:disabled { opacity: .5; cursor: default; }
 	</div>
 </main>
 <div class="meta">
-	<p class="fine">Odds: ${fmtLadder(ladder)}. Winners get their pass from Mehul by email.</p>
+	<p class="fine">Odds: ${fmtLadder(ladder)}. Winners get their pass by email.</p>
 	<a class="src" href="${REPO}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8 6 2 12l6 6M16 6l6 6-6 6"/></svg>View source code</a>
 </div>
+
+<section class="donors" aria-labelledby="donors-title">
+	<h2 id="donors-title">Passes shared by</h2>
+	<ul>${donorList()}</ul>
+	<p class="add">Got Claude Code passes to share? <a href="https://x.com/mehulmpt" target="_blank" rel="noopener noreferrer">DM @mehulmpt on X</a> to add yours.</p>
+</section>
 
 <footer class="site">
 	<div class="by">

@@ -9,10 +9,12 @@ import {
 	vi,
 } from 'vite-plus/test'
 import { z } from 'zod'
-import { randomToken, sha256 } from '../src/lib.ts'
+import { oddsOneIn, parseLadder, randomToken, sha256 } from '../src/lib.ts'
+import { DONORS } from '../src/page.ts'
 
 const ORIGIN = 'https://claudepass.mehulmohan.com'
 const TEST_IP = '198.51.100.250'
+const TOTAL = Number(env.TOTAL_PASSES)
 
 // Each test uses fresh IPs so the per-network rate limiter never interferes.
 let ipCounter = 0
@@ -261,22 +263,20 @@ describe('playing', () => {
 	it('never reserves more passes than exist, even when everyone wins at once', async () => {
 		forceRoll({ win: true })
 		const results = await Promise.all(
-			Array.from({ length: 10 }, () => play({ ip: nextIp() })),
+			Array.from({ length: TOTAL + 7 }, () => play({ ip: nextIp() })),
 		)
-		expect(results.filter((r) => r.data.won === true)).toHaveLength(3)
-		expect(await count('SELECT COUNT(*) n FROM claims')).toBe(3)
+		expect(results.filter((r) => r.data.won === true)).toHaveLength(TOTAL)
+		expect(await count('SELECT COUNT(*) n FROM claims')).toBe(TOTAL)
 	})
 
 	it('reports sold out once all passes are reserved', async () => {
 		forceRoll({ win: true })
-		for (let i = 0; i < 3; i++) await play({ ip: nextIp() })
+		for (let i = 0; i < TOTAL; i++) await play({ ip: nextIp() })
 		expect((await play({ ip: nextIp() })).status).toBe(410)
 	})
 
 	it('returns an expired reservation to the pool', async () => {
-		await reserve({ expiresIn: -1 })
-		await reserve({ expiresIn: -1 })
-		await reserve({ expiresIn: -1 })
+		for (let i = 0; i < TOTAL; i++) await reserve({ expiresIn: -1 })
 		forceRoll({ win: true })
 		expect((await play({ ip: nextIp() })).data.won).toBe(true)
 	})
@@ -369,5 +369,21 @@ describe('live stats', () => {
 		})
 			.strict()
 			.parse(await res.json())
+	})
+})
+
+describe('config', () => {
+	it('credits exactly as many passes as the giveaway has', () => {
+		expect(DONORS.reduce((sum, d) => sum + d.passes, 0)).toBe(TOTAL)
+	})
+
+	it('has odds for every pass: 10k, 10k, 20k, 20k, 100k, 100k', () => {
+		const ladder = parseLadder(env.WIN_ODDS)
+		expect(ladder).toHaveLength(TOTAL)
+		expect(
+			Array.from({ length: TOTAL }, (_, taken) =>
+				oddsOneIn({ ladder, taken }),
+			),
+		).toEqual([10000, 10000, 20000, 20000, 100000, 100000])
 	})
 })
