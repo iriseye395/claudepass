@@ -218,7 +218,7 @@ const html = ({
 ::selection { background: rgba(217, 119, 87, .38); color: #fff; }
 input::selection { background: rgba(217, 119, 87, .45); color: #fff; }
 html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); }
-body { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
+body { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; padding: 24px 16px; }
 .wrap { width: min(720px, 100%); }
 .term {
 	width: 100%; background: var(--panel); border: 1px solid var(--line);
@@ -353,9 +353,15 @@ form button:disabled { opacity: .5; cursor: default; }
 .legal { flex-basis: 100%; margin: 2px 0 0; font-size: 11.5px; line-height: 1.6; color: var(--dim); }
 
 /* --- Clawd --- */
-.wrap { position: relative; }
+.wrap {
+	/* Reserve room above the card so Clawd is never clipped by the top of the viewport
+	   (on phones the card sits right under the body padding). */
+	--clawd-w: 96px; --clawd-h: 66px; --clawd-room: calc(var(--clawd-h) - 16px);
+	position: relative; padding-top: var(--clawd-room);
+}
 .clawd {
-	position: absolute; top: 0; right: 34px; z-index: 2; width: 96px; height: 66px;
+	position: absolute; top: var(--clawd-room); right: 34px; z-index: 2;
+	width: var(--clawd-w); height: var(--clawd-h);
 	transform: translateY(-100%); margin-top: 1px;
 	background: none; border: 0; padding: 0; cursor: pointer;
 }
@@ -446,7 +452,16 @@ form button:disabled { opacity: .5; cursor: default; }
 	.ticket { font-size: 13px; padding: 10px 10px; }
 	.site { justify-content: center; text-align: center; }
 	.legal { text-align: center; }
-	.clawd { width: 76px; height: 52px; right: 20px; }
+	.wrap { --clawd-w: 76px; --clawd-h: 52px; }
+	.clawd { right: 20px; }
+}
+@media (max-width: 360px) {
+	body { padding: 24px 10px; }
+	.body { padding: 20px 14px 18px; }
+	.tickets { gap: 6px; }
+	.ticket { flex: 1 1 0; min-width: 0; font-size: 10.5px; padding: 9px 0; text-align: center; }
+	.wrap { --clawd-w: 68px; --clawd-h: 47px; }
+	.clawd { right: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
